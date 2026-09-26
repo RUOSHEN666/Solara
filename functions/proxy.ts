@@ -1,4 +1,4 @@
-const API_BASE_URL = "https://api.tunefree.fun/api/";
+const API_BASE_URL = "https://music-api.gdstudio.xyz/api.php";
 const KUWO_HOST_PATTERN = /(^|\.)kuwo\.cn$/i;
 const SAFE_RESPONSE_HEADERS = ["content-type", "cache-control", "accept-ranges", "content-length", "content-range", "etag", "last-modified", "expires"];
 
@@ -85,35 +85,16 @@ async function proxyKuwoAudio(targetUrl: string, request: Request): Promise<Resp
 
 async function proxyApiRequest(url: URL, request: Request): Promise<Response> {
   const apiUrl = new URL(API_BASE_URL);
-  const params = url.searchParams;
-  const types = params.get("types");
+  url.searchParams.forEach((value, key) => {
+    if (key === "target" || key === "callback") {
+      return;
+    }
+    apiUrl.searchParams.set(key, value);
+  });
 
-  if (!types) {
+  if (!apiUrl.searchParams.has("types")) {
     return new Response("Missing types", { status: 400 });
   }
-
-  // TuneHub 参数映射
-  // Solara 的 types 对应 TuneHub 的 type
-  apiUrl.searchParams.set("type", types);
-
-  // 默认音源为网易云
-  const source = params.get("source") || "netease";
-  apiUrl.searchParams.set("source", source);
-
-  // 直接透传 id / filter / pages / limit 等参数
-  // TuneHub 的搜索接口使用 keyword 参数
-  const filter = params.get("filter");
-  if (filter && types === "search") {
-    apiUrl.searchParams.set("keyword", filter);
-  } else if (filter) {
-    apiUrl.searchParams.set("id", filter);
-  }
-
-  const pages = params.get("pages");
-  if (pages) apiUrl.searchParams.set("page", pages);
-
-  const limit = params.get("limit");
-  if (limit) apiUrl.searchParams.set("limit", limit);
 
   const upstream = await fetch(apiUrl.toString(), {
     headers: {
