@@ -1,4 +1,4 @@
-const API_BASE_URL = "https://music-api.gdstudio.xyz/api.php";
+const API_BASE_URL = "https://meting.mikus.ink/api";
 const KUWO_HOST_PATTERN = /(^|\.)kuwo\.cn$/i;
 const SAFE_RESPONSE_HEADERS = ["content-type", "cache-control", "accept-ranges", "content-length", "content-range", "etag", "last-modified", "expires"];
 
@@ -85,15 +85,42 @@ async function proxyKuwoAudio(targetUrl: string, request: Request): Promise<Resp
 
 async function proxyApiRequest(url: URL, request: Request): Promise<Response> {
   const apiUrl = new URL(API_BASE_URL);
-  url.searchParams.forEach((value, key) => {
-    if (key === "target" || key === "callback") {
-      return;
-    }
-    apiUrl.searchParams.set(key, value);
-  });
+  const params = url.searchParams;
+  const types = params.get("types");
 
-  if (!apiUrl.searchParams.has("types")) {
+  if (!types) {
     return new Response("Missing types", { status: 400 });
+  }
+
+  // 统一设置默认音乐源为网易云
+  apiUrl.searchParams.set("server", "netease");
+
+  if (types === "search") {
+    apiUrl.searchParams.set("type", "search");
+    const filter = params.get("filter");
+    if (filter) apiUrl.searchParams.set("id", filter);
+    const pages = params.get("pages");
+    if (pages) apiUrl.searchParams.set("page", pages);
+    const limit = params.get("limit");
+    if (limit) apiUrl.searchParams.set("limit", limit);
+  } else if (types === "url") {
+    apiUrl.searchParams.set("type", "url");
+    const id = params.get("id");
+    if (id) apiUrl.searchParams.set("id", id);
+  } else if (types === "song") {
+    apiUrl.searchParams.set("type", "song");
+    const id = params.get("id");
+    if (id) apiUrl.searchParams.set("id", id);
+  } else if (types === "lrc") {
+    apiUrl.searchParams.set("type", "lrc");
+    const id = params.get("id");
+    if (id) apiUrl.searchParams.set("id", id);
+  } else if (types === "pic") {
+    apiUrl.searchParams.set("type", "pic");
+    const id = params.get("id");
+    if (id) apiUrl.searchParams.set("id", id);
+  } else {
+    return new Response("Unsupported types: " + types, { status: 400 });
   }
 
   const upstream = await fetch(apiUrl.toString(), {
