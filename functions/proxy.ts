@@ -1,4 +1,4 @@
-const API_BASE_URL = "https://meting.mikus.ink/api";
+const API_BASE_URL = "https://api.tunefree.fun/api/";
 const KUWO_HOST_PATTERN = /(^|\.)kuwo\.cn$/i;
 const SAFE_RESPONSE_HEADERS = ["content-type", "cache-control", "accept-ranges", "content-length", "content-range", "etag", "last-modified", "expires"];
 
@@ -92,36 +92,28 @@ async function proxyApiRequest(url: URL, request: Request): Promise<Response> {
     return new Response("Missing types", { status: 400 });
   }
 
-  // 统一设置默认音乐源为网易云
-  apiUrl.searchParams.set("server", "netease");
+  // TuneHub 参数映射
+  // Solara 的 types 对应 TuneHub 的 type
+  apiUrl.searchParams.set("type", types);
 
-  if (types === "search") {
-    apiUrl.searchParams.set("type", "search");
-    const filter = params.get("filter");
-    if (filter) apiUrl.searchParams.set("id", filter);
-    const pages = params.get("pages");
-    if (pages) apiUrl.searchParams.set("page", pages);
-    const limit = params.get("limit");
-    if (limit) apiUrl.searchParams.set("limit", limit);
-  } else if (types === "url") {
-    apiUrl.searchParams.set("type", "url");
-    const id = params.get("id");
-    if (id) apiUrl.searchParams.set("id", id);
-  } else if (types === "song") {
-    apiUrl.searchParams.set("type", "song");
-    const id = params.get("id");
-    if (id) apiUrl.searchParams.set("id", id);
-  } else if (types === "lrc") {
-    apiUrl.searchParams.set("type", "lrc");
-    const id = params.get("id");
-    if (id) apiUrl.searchParams.set("id", id);
-  } else if (types === "pic") {
-    apiUrl.searchParams.set("type", "pic");
-    const id = params.get("id");
-    if (id) apiUrl.searchParams.set("id", id);
-  } else {
-    return new Response("Unsupported types: " + types, { status: 400 });
+  // 默认音源为网易云
+  const source = params.get("source") || "netease";
+  apiUrl.searchParams.set("source", source);
+
+  // 直接透传 id / filter / pages / limit 等参数
+  // TuneHub 的搜索接口使用 keyword 参数
+  const filter = params.get("filter");
+  if (filter && types === "search") {
+    apiUrl.searchParams.set("keyword", filter);
+  } else if (filter) {
+    apiUrl.searchParams.set("id", filter);
   }
+
+  const pages = params.get("pages");
+  if (pages) apiUrl.searchParams.set("page", pages);
+
+  const limit = params.get("limit");
+  if (limit) apiUrl.searchParams.set("limit", limit);
 
   const upstream = await fetch(apiUrl.toString(), {
     headers: {
